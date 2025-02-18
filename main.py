@@ -1,6 +1,6 @@
-from evdev import InputDevice, categorize, ecodes, InputEvent
-
+import time
 import asyncio
+from evdev import InputDevice, categorize, ecodes, InputEvent
 
 
 async def main(dev: InputDevice):
@@ -47,6 +47,8 @@ async def run_loop(device):
     try:
         while True:
             await main(device)
+            print("Long running Task")
+            time.sleep(0.5)
             print("Loop continuing...")
     except KeyboardInterrupt:
         print("Stopping loop...")
