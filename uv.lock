@@ -1,0 +1,19 @@
+version = 1
+requires-python = ">=3.10"
+
+[[package]]
+name = "evdev"
+version = "1.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8c/bf/0fe4d372ee62fe5aec06aae2e97c0603d131b8e3cbaffa2329e0bd763a98/evdev-1.9.0.tar.gz", hash = "sha256:38218bc95507cad756bc621a5fe7a77a41eb8d9c1213855de8e4ba0aba28e79f", size = 32854 }
+
+[[package]]
+name = "keyboard-event"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "evdev" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "evdev", specifier = ">=1.9.0" }]
