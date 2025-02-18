@@ -32,15 +32,31 @@ async def monitor_device(device: InputDevice):
     try:
         while True:
             try:
-                event = await asyncio.wait_for(device.async_read_one(), timeout=0.1)
-                await process_event(event, device.name)
+                # Use a shorter timeout to be more responsive
+                event = await asyncio.wait_for(device.async_read_one(), timeout=0.05)
+                if event:
+                    await process_event(event, device.name)
             except asyncio.TimeoutError:
-                pass
-            except asyncio.exceptions.InvalidStateError:
-                pass
-            await asyncio.sleep(0.003)
+                # Expected timeout, continue monitoring
+                continue
+            except (asyncio.exceptions.InvalidStateError, OSError) as e:
+                # Device might be disconnected or in invalid state
+                print(f"Device {device.name} error: {e}")
+                break  # Exit the monitoring loop for this device
+            except Exception as e:
+                print(f"Unexpected error monitoring {device.name}: {e}")
+                break
+            
+            # Small sleep to prevent CPU overload
+            await asyncio.sleep(0.001)
     except Exception as e:
-        print(f"Error monitoring device {device.name}: {e}")
+        print(f"Fatal error monitoring device {device.name}: {e}")
+    finally:
+        try:
+            device.close()
+        except:
+            pass  # Ignore errors during cleanup
+
 
 def find_keyboards():
     devices = []
@@ -56,22 +72,28 @@ def find_keyboards():
     return devices
 
 async def run_multiple_keyboards():
-    keyboards = find_keyboards()
-    if not keyboards:
-        print("No keyboards found!")
-        return
+    while True:  # Main monitoring loop
+        try:
+            keyboards = find_keyboards()
+            if not keyboards:
+                print("No keyboards found! Retrying in 5 seconds...")
+                await asyncio.sleep(5)
+                continue
 
-    try:
-        # Create tasks for each keyboard
-        tasks = [monitor_device(device) for device in keyboards]
-        print(f"Monitoring {len(keyboards)} keyboards...")
-        # Run all tasks concurrently
-        await asyncio.gather(*tasks)
-    except KeyboardInterrupt:
-        print("Stopping keyboard monitoring...")
-    finally:
-        for device in keyboards:
-            device.close()
+            print(f"Monitoring {len(keyboards)} keyboards...")
+            tasks = [monitor_device(device) for device in keyboards]
+            await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # If we get here, all tasks have completed (probably due to errors)
+            print("All keyboard monitoring tasks ended. Restarting...")
+            await asyncio.sleep(1)
+            
+        except KeyboardInterrupt:
+            print("Stopping keyboard monitoring...")
+            break
+        except Exception as e:
+            print(f"Error in main loop: {e}")
+            await asyncio.sleep(1)
 
 if __name__ == "__main__":
     try:
